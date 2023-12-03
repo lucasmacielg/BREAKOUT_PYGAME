@@ -60,7 +60,7 @@ class Ball:
         self.x = self.original_x = x
         self.y = self.original_y = y
         self.radius = radius
-        self.x_vel = 2
+        self.x_vel = 3
         self.y_vel = self.VEL
 
     def draw(self, screen):
