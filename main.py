@@ -97,14 +97,18 @@ class Brick:
         pygame.draw.rect(screen, self.color, self.rect)
 
     def reset(self):
-        self.rect = self.rect
-        self.color = self.color
+        self.rect = pygame.Rect(0, 0, 0, 0)  # Reset the rect to an empty rectangle
+        self.color = BLACK  # Reset the color to black or any default color
 
 
 bricks = []
 
 
 def create_bricks():
+    global bricks  # Make sure to use the global bricks list
+
+    bricks = []  # Reset the bricks list to start with an empty list
+
     brick_width = (WIDTH - 40) // 14
     brick_height = 10
     top_offset = 100
@@ -144,12 +148,17 @@ def collision(ball, paddle, brick_list, score):
     if ball.check_bottom_collision():
         return True
 
+    # Iterate through bricks and check for collisions
     for brick in brick_list:
         if ball.rect.colliderect(brick.rect):
+            print("Collision with brick:", brick.rect)  # Debugging print statement
             ball.y_vel *= -1
             brick_list.remove(brick)
             bounce_sound.play()
-            break
+            score += 1  # Update the score when a brick is hit
+            break  # Break after hitting one brick in the same frame
+
+    return False
 
 
 def movement(keys, paddle):
@@ -159,14 +168,17 @@ def movement(keys, paddle):
         paddle.move(up=False)
 
 
-def restart_game(brick_list, ball, paddle, score):
-    for brick in brick_list:
-        brick.reset()
-    ball.reset()
-    paddle.reset()
+def restart_game():
+    global bricks, ball, paddle, score
+
+    bricks = []
     create_bricks()
+
+    ball = Ball(WIDTH // 2, HEIGHT // 2, BALL_RADIUS)
+    paddle = Paddle(WIDTH // 2, HEIGHT - 125, PADDLE_WIDTH, PADDLE_HEIGHT)  # Adicione esta linha para recriar a raquete
     score = 0
-    return ball, paddle, brick_list, score
+
+    return ball, paddle, bricks, score
 
 
 pygame.mixer.music.load("assets/i_wonder.wav")
@@ -229,7 +241,7 @@ def main():
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        ball, paddle, bricks, score = restart_game(bricks, ball, paddle, score)
+                        ball, paddle, bricks, score = restart_game()
 
             keys = pygame.key.get_pressed()
             movement(keys, paddle)
@@ -281,7 +293,7 @@ def main():
                             if event.key == pygame.K_SPACE:
                                 pygame.mixer.pause()
                                 pygame.mixer.music.play()
-                                ball, paddle, bricks, score = restart_game(bricks, ball, paddle, score)
+                                ball, paddle, bricks, score = restart_game()
                                 draw(SCREEN, [paddle], ball, score)
                                 pygame.display.update()
                                 lost = False
@@ -289,5 +301,5 @@ def main():
 
 
 if __name__ == '__main__':
+    create_bricks()
     main()
-
