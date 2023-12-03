@@ -159,13 +159,14 @@ def movement(keys, paddle):
         paddle.move(up=False)
 
 
-def restart_game(brick, ball, paddle, score):
-    brick.reset()
+def restart_game(brick_list, ball, paddle, score):
+    for brick in brick_list:
+        brick.reset()
     ball.reset()
     paddle.reset()
     create_bricks()
     score = 0
-    return ball, paddle, brick, score
+    return ball, paddle, brick_list, score
 
 
 pygame.mixer.music.load("assets/i_wonder.wav")
@@ -199,6 +200,8 @@ def draw(screen, paddles, ball, score):
 
 
 def main():
+    global bricks
+
     game_loop = True
     clock = pygame.time.Clock()
     pygame.mixer.music.play(-1)
@@ -211,7 +214,7 @@ def main():
     won = False
     lost = False
     score = 0
-    restart_text_font = pygame.font.Font('assets/font.ttf', 20)
+    restart_text_font = pygame.font.Font(None, 20)
     restart_text = restart_text_font.render("PRESS SPACE TO RESTART", True, WHITE)
 
     while game_loop:
@@ -226,7 +229,7 @@ def main():
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        brick, ball, paddle, score = restart_game(brick, ball, paddle, score)
+                        ball, paddle, bricks, score = restart_game(bricks, ball, paddle, score)
 
             keys = pygame.key.get_pressed()
             movement(keys, paddle)
@@ -278,7 +281,7 @@ def main():
                             if event.key == pygame.K_SPACE:
                                 pygame.mixer.pause()
                                 pygame.mixer.music.play()
-                                brick, ball, paddle, score = restart_game(brick, ball, paddle, score)
+                                ball, paddle, bricks, score = restart_game(bricks, ball, paddle, score)
                                 draw(SCREEN, [paddle], ball, score)
                                 pygame.display.update()
                                 lost = False
@@ -287,3 +290,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
