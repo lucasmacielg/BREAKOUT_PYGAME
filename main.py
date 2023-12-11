@@ -19,12 +19,12 @@ FPS = 60
 PADDLE_WIDTH, PADDLE_HEIGHT = 65, 15
 BALL_RADIUS = 8
 
-FONT = pygame.font.Font(None, 60)
-WINNING_SCORE = 336
+FONT = pygame.font.SysFont("font.ttf", 60)
+
+WINNING_SCORE = 104
 restart = False
 
 volume = 0.3
-
 
 class Paddle:
     COLOR = WHITE
@@ -48,7 +48,6 @@ class Paddle:
     def reset(self):
         self.x = self.original_x
         self.y = self.original_y
-
 
 class Ball:
     VEL = 5
@@ -85,6 +84,13 @@ class Ball:
     def check_bottom_collision(self):
         return self.y + self.radius > HEIGHT - 15
 
+    def check_paddle_collision(self, paddle):
+        return (
+            self.y + self.radius > paddle.y and
+            self.y - self.radius < paddle.y + paddle.height and
+            self.x + self.radius > paddle.x and
+            self.x - self.radius < paddle.x + paddle.width
+        )
 
 class Brick:
     COLORS = [RED, ORANGE, GREEN, YELLOW]
@@ -97,18 +103,14 @@ class Brick:
         pygame.draw.rect(screen, self.color, self.rect)
 
     def reset(self):
-        self.rect = pygame.Rect(0, 0, 0, 0)  # Reset the rect to an empty rectangle
-        self.color = BLACK  # Reset the color to black or any default color
-
+        self.rect = pygame.Rect(0, 0, 0, 0)
+        self.color = BLACK
 
 bricks = []
 
-
 def create_bricks():
-    global bricks  # Make sure to use the global bricks list
-
-    bricks = []  # Reset the bricks list to start with an empty list
-
+    global bricks
+    bricks = []
     brick_width = (WIDTH - 40) // 14
     brick_height = 10
     top_offset = 100
@@ -116,27 +118,23 @@ def create_bricks():
     for row in range(8):
         brick_color = Brick.COLORS[row // 2 % len(Brick.COLORS)]
         for col in range(13):
-            brick = Brick(col * (brick_width + 5), top_offset + row * (brick_height + 5), brick_width, brick_height,
-                          brick_color)
+            brick = Brick(col * (brick_width + 5), top_offset + row * (brick_height + 5), brick_width, brick_height, brick_color)
             bricks.append(brick)
-
 
 def draw_bricks(screen):
     for brick in bricks:
         brick.draw(screen)
 
-
 def collision(ball, paddle, brick_list, score):
     bounce_sound = pygame.mixer.Sound('assets/bounce.wav')
     bounce_sound.set_volume(volume)
 
-    # Check for collisions with paddle
-    if (paddle.y <= ball.y <= paddle.y + paddle.height and
-            paddle.x <= ball.x <= paddle.x + paddle.width):
-        ball.y_vel *= -1
+    if ball.check_paddle_collision(paddle):
+        if ball.y_vel > 0:
+            ball.y_vel *= -1
+            ball.y = paddle.y - ball.radius - 1
         bounce_sound.play()
 
-    # Check for collisions with screen boundaries
     if ball.x - ball.radius <= 15 or ball.x + ball.radius >= WIDTH - 15:
         ball.set_vel(ball.x_vel * -1, ball.y_vel)
         bounce_sound.play()
@@ -146,20 +144,21 @@ def collision(ball, paddle, brick_list, score):
         bounce_sound.play()
 
     if ball.check_bottom_collision():
-        return True
+        return True, False, score
 
-    # Iterate through bricks and check for collisions
     for brick in brick_list:
         if ball.rect.colliderect(brick.rect):
-            print("Collision with brick:", brick.rect)  # Debugging print statement
             ball.y_vel *= -1
             brick_list.remove(brick)
             bounce_sound.play()
-            score += 1  # Update the score when a brick is hit
-            break  # Break after hitting one brick in the same frame
+            score += 1  
 
-    return False
+            if score == WINNING_SCORE:
+                return True, True, score
 
+            break
+
+    return False, False, score
 
 def movement(keys, paddle):
     if keys[pygame.K_a] and paddle.x - paddle.VEL >= 0:
@@ -167,21 +166,15 @@ def movement(keys, paddle):
     if keys[pygame.K_d] and paddle.x + paddle.width + paddle.VEL <= WIDTH:
         paddle.move(up=False)
 
-
 def restart_game():
     global bricks, ball, paddle, score
-
     bricks = []
     create_bricks()
-
     ball = Ball(WIDTH // 2, HEIGHT // 2, BALL_RADIUS)
-    paddle = Paddle(WIDTH // 2, HEIGHT - 125, PADDLE_WIDTH, PADDLE_HEIGHT)  # Adicione esta linha para recriar a raquete
+    paddle = Paddle(WIDTH // 2, HEIGHT - 125, PADDLE_WIDTH, PADDLE_HEIGHT)
     score = 0
-
     return ball, paddle, bricks, score
 
-
-pygame.mixer.music.load("assets/i_wonder.wav")
 scoring_sound = pygame.mixer.Sound('assets/point.wav')
 victory_sound = pygame.mixer.Sound('assets/win_music.wav')
 defeat_sound = pygame.mixer.Sound('assets/lose_music.wav')
@@ -190,16 +183,18 @@ scoring_sound.set_volume(volume)
 victory_sound.set_volume(volume)
 defeat_sound.set_volume(volume)
 
-
-def draw(screen, paddles, ball, score):
+def draw(screen, paddles, ball, score, lost):
     screen.fill(WHITE)
 
-    # Draw border around the entire game area
     pygame.draw.rect(screen, BLACK, (15, 15, WIDTH - 30, TOP_BLACK_SPACE + 15))
     pygame.draw.rect(screen, BLACK, (15, TOP_BLACK_SPACE, WIDTH - 30, HEIGHT - 15))
 
-    score_text = FONT.render(f"{score}", True, WHITE)
-    screen.blit(score_text, (WIDTH - 100 - score_text.get_width() // 2, TOP_BLACK_SPACE + 10))
+    if not lost:
+        score_text = FONT.render(f"{score}", True, WHITE)
+        screen.blit(score_text, (WIDTH - score_text.get_width() - 20, 20))
+    else:
+        score_text = FONT.render(str(score), True, WHITE)
+        screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, TOP_BLACK_SPACE + 10))
 
     draw_bricks(screen)
 
@@ -210,30 +205,26 @@ def draw(screen, paddles, ball, score):
 
     pygame.display.update()
 
-
 def main():
     global bricks
-
     game_loop = True
     clock = pygame.time.Clock()
-    pygame.mixer.music.play(-1)
-
     paddle = Paddle(WIDTH // 2, HEIGHT - 125, PADDLE_WIDTH, PADDLE_HEIGHT)
     ball = Ball(WIDTH // 2, HEIGHT // 2, BALL_RADIUS)
-
     create_bricks()
-
     won = False
     lost = False
     score = 0
     restart_text_font = pygame.font.Font(None, 20)
     restart_text = restart_text_font.render("PRESS SPACE TO RESTART", True, WHITE)
 
+    victory = False
+
     while game_loop:
         clock.tick(FPS)
 
         if not lost:
-            draw(SCREEN, [paddle], ball, score)
+            draw(SCREEN, [paddle], ball, score, lost)       
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -247,36 +238,29 @@ def main():
             movement(keys, paddle)
             ball.move()
 
-            if collision(ball, paddle, bricks, score):
+            game_over, victory, score= collision(ball, paddle, bricks, score)
+
+            if game_over:
                 pygame.mixer.music.pause()
                 SCREEN.fill(BLACK)
                 pygame.display.update()
                 lost = True
 
-            win_text = ' '
-            if score == WINNING_SCORE:
-                won = True
-                win_text = 'YOU WON!'
-                victory_sound.play()
-
-            if won:
+            if victory:
                 pygame.mixer.music.pause()
                 SCREEN.fill(BLACK)
                 win_text = 'YOU WIN!'
-                SCREEN.blit(restart_text,
-                            (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 - restart_text.get_height() // 2))
+                SCREEN.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 - restart_text.get_height() // 2))
                 text = FONT.render(win_text, True, WHITE)
                 SCREEN.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2 - 200))
-                won = False
                 pygame.display.update()
+                pygame.time.delay(3000)
+                ball, paddle, bricks, score = restart_game()
 
             if lost:
                 pygame.mixer.music.pause()
                 SCREEN.fill(BLACK)
-                SCREEN.blit(restart_text,
-                            (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 - restart_text.get_height() // 2))
-                text = FONT.render(win_text, True, WHITE)
-                SCREEN.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2 - 50))
+                SCREEN.blit(restart_text, (WIDTH // 2 - restart_text.get_width() // 2, HEIGHT // 2 - restart_text.get_height() // 2))
                 text = FONT.render("YOU LOST!", True, WHITE)
                 SCREEN.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2 - 200))
                 pygame.display.update()
@@ -292,13 +276,11 @@ def main():
                         if event.type == pygame.KEYDOWN:
                             if event.key == pygame.K_SPACE:
                                 pygame.mixer.pause()
-                                pygame.mixer.music.play()
                                 ball, paddle, bricks, score = restart_game()
-                                draw(SCREEN, [paddle], ball, score)
+                                draw(SCREEN, [paddle], ball, score, lost)
                                 pygame.display.update()
                                 lost = False
                                 space_pressed = True
-
 
 if __name__ == '__main__':
     create_bricks()
