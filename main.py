@@ -8,27 +8,28 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 ORANGE = (255, 165, 0)
 YELLOW = (255, 255, 0)
+BLUE = (0, 0, 255)
 
-WIDTH, HEIGHT = 625, 850
+WIDTH, HEIGHT = 600, 800
 TOP_BLACK_SPACE = 50
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT + TOP_BLACK_SPACE))
 pygame.display.set_caption("Breakout Game")
 
 FPS = 60
 
-PADDLE_WIDTH, PADDLE_HEIGHT = 65, 15
-BALL_RADIUS = 8
+PADDLE_WIDTH, PADDLE_HEIGHT = 60, 10
+BALL_RADIUS = 6
 
-FONT = pygame.font.SysFont("font.ttf", 60)
+FONT = pygame.font.Font("assets/font.ttf", 40)
 
 WINNING_SCORE = 104
 restart = False
 
 volume = 0.3
 
-class Paddle:
+class Paddle:   
     COLOR = WHITE
-    VEL = 5
+    VEL = 8
 
     def __init__(self, x, y, width, height):
         self.x = self.original_x = x
@@ -39,8 +40,8 @@ class Paddle:
     def draw(self, win):
         pygame.draw.rect(win, self.COLOR, (self.x, self.y, self.width, self.height))
 
-    def move(self, up=True):
-        if up:
+    def move(self, left=True):
+        if left:
             self.x -= self.VEL
         else:
             self.x += self.VEL
@@ -50,14 +51,14 @@ class Paddle:
         self.y = self.original_y
 
 class Ball:
-    VEL = 5
+    VEL = 3
     COLOR = WHITE
 
     def __init__(self, x, y, radius):
         self.x = self.original_x = x
         self.y = self.original_y = y
         self.radius = radius
-        self.x_vel = 3
+        self.x_vel = 2
         self.y_vel = self.VEL
         self.rect = pygame.Rect(x - radius, y - radius, 2 * radius, 2 * radius)
 
@@ -77,7 +78,7 @@ class Ball:
     def reset(self):
         self.x = self.original_x
         self.y = self.original_y
-        self.x_vel = 3
+        self.x_vel = 2
         self.y_vel = self.VEL
         self.rect = pygame.Rect(self.x - self.radius, self.y - self.radius, 2 * self.radius, 2 * self.radius)
 
@@ -85,12 +86,29 @@ class Ball:
         return self.y + self.radius > HEIGHT - 15
 
     def check_paddle_collision(self, paddle):
-        return (
+        if (
             self.y + self.radius > paddle.y and
             self.y - self.radius < paddle.y + paddle.height and
             self.x + self.radius > paddle.x and
             self.x - self.radius < paddle.x + paddle.width
-        )
+        ):
+            self.y_vel *= -1
+            self.increase_speed()
+            return True
+        return False
+
+    def check_brick_collision(self, brick_list):
+        for brick in brick_list:
+            if self.rect.colliderect(brick.rect):
+                self.y_vel *= -1
+                brick_list.remove(brick)
+                self.increase_speed()
+                return True
+        return False
+
+    def increase_speed(self):
+        self.x_vel *= 1.1
+        self.y_vel *= 1.1
 
 class Brick:
     COLORS = [RED, ORANGE, GREEN, YELLOW]
@@ -111,7 +129,7 @@ bricks = []
 def create_bricks():
     global bricks
     bricks = []
-    brick_width = (WIDTH - 40) // 14
+    brick_width = (WIDTH - 81) // 13
     brick_height = 10
     top_offset = 100
 
@@ -146,25 +164,20 @@ def collision(ball, paddle, brick_list, score):
     if ball.check_bottom_collision():
         return True, False, score
 
-    for brick in brick_list:
-        if ball.rect.colliderect(brick.rect):
-            ball.y_vel *= -1
-            brick_list.remove(brick)
-            bounce_sound.play()
-            score += 1  
+    if ball.check_brick_collision(brick_list):
+        bounce_sound.play()
+        score += 1
 
-            if score == WINNING_SCORE:
-                return True, True, score
-
-            break
+        if score == WINNING_SCORE:
+            return True, True, score
 
     return False, False, score
 
 def movement(keys, paddle):
     if keys[pygame.K_a] and paddle.x - paddle.VEL >= 0:
-        paddle.move(up=True)
+        paddle.move(left=True)
     if keys[pygame.K_d] and paddle.x + paddle.width + paddle.VEL <= WIDTH:
-        paddle.move(up=False)
+        paddle.move(left=False)
 
 def restart_game():
     global bricks, ball, paddle, score
