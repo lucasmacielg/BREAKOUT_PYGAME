@@ -8,7 +8,6 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 ORANGE = (255, 165, 0)
 YELLOW = (255, 255, 0)
-BLUE = (0, 0, 255)
 
 WIDTH, HEIGHT = 600, 800
 TOP_BLACK_SPACE = 50
@@ -107,8 +106,8 @@ class Ball:
         return False
 
     def increase_speed(self):
-        self.x_vel *= 1.1
-        self.y_vel *= 1.1
+        self.x_vel *= 1.07
+        self.y_vel *= 1.07
 
 class Brick:
     COLORS = [RED, ORANGE, GREEN, YELLOW]
