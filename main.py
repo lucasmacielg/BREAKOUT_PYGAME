@@ -16,7 +16,7 @@ pygame.display.set_caption("Breakout Game")
 
 FPS = 60
 
-PADDLE_WIDTH, PADDLE_HEIGHT = 60, 10
+PADDLE_WIDTH, PADDLE_HEIGHT = 70, 10
 BALL_RADIUS = 6
 
 FONT = pygame.font.Font("assets/font.ttf", 40)
@@ -106,8 +106,8 @@ class Ball:
         return False
 
     def increase_speed(self):
-        self.x_vel *= 1.07
-        self.y_vel *= 1.07
+        self.x_vel = self.x_vel * 1.01
+        self.y_vel = self.y_vel * 1.01
 
 class Brick:
     COLORS = [RED, ORANGE, GREEN, YELLOW]
@@ -188,12 +188,9 @@ def restart_game():
     return ball, paddle, bricks, score
 
 scoring_sound = pygame.mixer.Sound('assets/point.wav')
-victory_sound = pygame.mixer.Sound('assets/win_music.wav')
-defeat_sound = pygame.mixer.Sound('assets/lose_music.wav')
 pygame.mixer.music.set_volume(0.3)
 scoring_sound.set_volume(volume)
-victory_sound.set_volume(volume)
-defeat_sound.set_volume(volume)
+
 
 def draw(screen, paddles, ball, score, lost):
     screen.fill(WHITE)
@@ -224,7 +221,6 @@ def main():
     paddle = Paddle(WIDTH // 2, HEIGHT - 125, PADDLE_WIDTH, PADDLE_HEIGHT)
     ball = Ball(WIDTH // 2, HEIGHT // 2, BALL_RADIUS)
     create_bricks()
-    won = False
     lost = False
     score = 0
     restart_text_font = pygame.font.Font(None, 20)
